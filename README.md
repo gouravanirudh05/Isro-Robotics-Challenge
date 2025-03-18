@@ -14,5 +14,4 @@ Run the GUI
 
 ```
 python3 GUI2.py
-
 ```
