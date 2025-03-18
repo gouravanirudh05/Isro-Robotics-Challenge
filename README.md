@@ -2,7 +2,7 @@
 GUI for the second round
 Instructions:
 
-Change the mavlink_controller from dummy_mavlink_controller to the mavlink_controller class.
+Change the mavlink_controller from dummy_mavlink_controller to the mavlink_controller class in GUI2.py for actual flight control
 
 Download the dependencies
 
