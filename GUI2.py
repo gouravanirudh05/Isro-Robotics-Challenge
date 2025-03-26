@@ -8,6 +8,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 # Import the Mavlink_Control class
 from mavlink_commands import Mavlink_Control
 from dummy_mavlink_controller import DummyMavlink_Control
+from new_mavlink import New_Mavlink_Control
 
 class DroneGUI:
     def __init__(self, root, mavlink_controller):
@@ -424,8 +425,8 @@ class DroneGUI:
 def main():
     """Main function to start the GUI"""
     # Create the Mavlink controller
-    #mavlink_controller = Mavlink_Control(14551) Uncomment for actual working
-    mavlink_controller = DummyMavlink_Control(14551)
+    mavlink_controller = New_Mavlink_Control(port="/dev/ttyUSB0",baud=57600) #Uncomment for actual working
+    #mavlink_controller = DummyMavlink_Control(14551)
     
     # Create the GUI
     root = tk.Tk()

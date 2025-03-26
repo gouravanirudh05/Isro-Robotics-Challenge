@@ -2,8 +2,8 @@ from pymavlink import mavutil
 import time
 
 class Mavlink_Control:
-    def __init__(self, port=14551):
-        self.connection = mavutil.mavlink_connection(f"udpin:localhost:{port}")
+    def __init__(self, port=14551,baud=57600):
+        self.connection = mavutil.mavlink_connection(port,baud=baud)
         # Wait for the first heartbeat
         self.connection.wait_heartbeat()
         print("Heartbeat from system (system %u component %u)" % 
@@ -51,16 +51,42 @@ class Mavlink_Control:
             return False
     
     def set_mode(self, mode):
-        """Set the specified flight mode"""
-        mode_id = self.connection.mode_mapping()[mode]
-        self.connection.mav.set_mode_send(
+        """Set the specified flight mode for PX4"""
+        mode_mapping = {
+            "MANUAL": 0,
+            "ALTCTL": 1,
+            "POSCTL": 2,
+            "AUTO.MISSION": 3,
+            "AUTO.LOITER": 4,
+            "AUTO.RTL": 5,
+            "ACRO": 6,
+            "OFFBOARD": 7,
+            "STABILIZED": 8,
+            "RATTITUDE": 9,
+            "AUTO.TAKEOFF": 10,
+            "AUTO.LAND": 11,
+            "AUTO.FOLLOW_TARGET": 12,
+            "GUIDED": 13
+        }
+        
+        if mode not in mode_mapping:
+            print(f"Unsupported mode: {mode}")
+            return False
+        
+        # PX4 uses different mode setting method
+        self.connection.mav.command_long_send(
             self.connection.target_system,
+            self.connection.target_component,
+            mavutil.mavlink.MAV_CMD_DO_SET_MODE,
+            0,  # confirmation
             mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
-            mode_id)
+            mode_mapping[mode],  # PX4 mode
+            0, 0, 0, 0, 0
+        )
         
         # Wait for ACK
         ack = self.connection.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
-        if ack:
+        if ack and ack.result == mavutil.mavlink.MAV_RESULT_ACCEPTED:
             print(f"Mode change to {mode} acknowledged")
             return True
         else:
@@ -68,24 +94,25 @@ class Mavlink_Control:
             return False
     
     def takeoff(self, height):
-        ''' Take off from the ground and flies at an altitude of 'height' meters '''
-        # Store the home position for returning later
-        self.get_home_position()
-        
-        # Set GUIDED mode if not already set
-        self.set_mode("GUIDED")
+        # Ensure in GUIDED or OFFBOARD mode for takeoff
+        self.set_mode("OFFBOARD")
         
         # Arm drone if not already armed
         if not self.is_armed():
             self.drone_arm()
-            time.sleep(1)  # Give time for arming to complete
+            time.sleep(1)
         
-        # Send takeoff command
+        # PX4 specific takeoff command
         self.connection.mav.command_long_send(
             self.connection.target_system,
             self.connection.target_component,
             mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
-            0, 0, 0, 0, 0, 0, 0, height)
+            0,  # confirmation
+            0,  # min pitch
+            0, 0, 0,  # yaw angle, latitude, longitude
+            0,  # minimum altitude
+            height  # takeoff altitude
+        )
         
         # Wait for ACK
         ack = self.connection.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
